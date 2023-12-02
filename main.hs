@@ -1,5 +1,6 @@
 
 import System.IO
+import System.Random
  
 type Coord = (Int, Int)
 
@@ -7,7 +8,22 @@ type Coord = (Int, Int)
 createBoard :: Coord -> [[Char]]
 createBoard (rows, cols) = replicate rows $ replicate cols '▯'
 
--- Convert list to Coordinate
+-- create mines layout given a probability and board of probabilities
+createMines :: Coord -> Float -> [[Float]] -> [[Bool]]
+createMines (rows, cols) p probabilities = map (\row -> (map (\innerProb -> innerProb <= p) row)) probabilities
+
+-- generate board of random probabilities
+genProbabilities :: Coord -> IO [[Float]]
+genProbabilities (rows, cols) = do
+    gen <- newStdGen
+    let probs = take (rows * cols) $ randoms gen :: [Float]
+    return $ splitProbs cols probs
+    where
+        splitProbs _ [] = []
+        splitProbs n xs = take n xs : splitProbs n (drop n xs) 
+
+
+-- convert list to Coordinate
 listToCoord :: [Int] -> Coord
 listToCoord [x, y] = (x,y)
 
@@ -61,7 +77,11 @@ main = do
 
     -- create board and mine layout
     board <- return $ createBoard grid
-    -- mines <- return $ createMines grid
+    probabilities <- genProbabilities grid
+    mines <- return $ createMines grid 0.4 probabilities
+
+    -- Debugging: print the boolean board for mines
+    putStrLn $ unlines $ map (concatMap (\b -> if b then "True " else "False ")) mines
 
     -- run the game loop 
     gameLoop board

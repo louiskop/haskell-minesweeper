@@ -1,7 +1,8 @@
 
 import System.IO
 import System.Random
- 
+import System.Exit (exitFailure)
+
 type Coord = (Int, Int)
 
 -- create empty board
@@ -68,13 +69,17 @@ gameLoop board mines = do
     coord <- return $ parseCoord raw
 
     -- check if user clicked on a mine
-    if checkMine mines coord then putStrLn "LOSER" else putStrLn "NICE" 
+    if checkMine mines coord 
+        then do 
+            putStrLn "Oops, you clicked on a mine, game over !"
+            exitFailure
+        else do 
+            -- alter board 
+            board <- return $ clickBlock board coord
+            gameLoop board mines
 
-    -- alter board 
-    -- board <- return $ clickBlock board coord
-    gameLoop board mines
 
-
+   
 main :: IO()
 main = do
 

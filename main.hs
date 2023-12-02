@@ -31,35 +31,48 @@ listToCoord [x, y] = (x,y)
 parseCoord :: String -> Coord
 parseCoord raw = listToCoord $ map read $ words raw
 
--- edit the row that was clicked on
-clickRow :: [Char] -> Int -> [Char]
-clickRow (x: xs) i
-                | i == 0 = ('█' : xs)
-                | otherwise = (x: clickRow xs (i-1))
+checkMineColumn :: [Bool] -> Int -> Bool
+checkMineColumn (x: xs) i
+                | i == 0 = x
+                | otherwise = checkMineColumn xs (i-1)
 
--- click on a block 
+checkMine :: [[Bool]] -> Coord -> Bool
+checkMine (x: xs) (row, col)
+                | row == 0 = checkMineColumn x col
+                | otherwise = checkMine xs (row-1, col)
+
+-- edit the col in the row that was clicked on
+clickColumn :: [Char] -> Int -> [Char]
+clickColumn (x: xs) i
+                | i == 0 = ('█' : xs)
+                | otherwise = (x: clickColumn xs (i-1))
+
+-- edit the block that was clicked on
 clickBlock :: [[Char]] -> Coord -> [[Char]]
 clickBlock (x: xs) (row, col) 
-                | row == 0 = ( (clickRow x col) : xs)
+                | row == 0 = ( (clickColumn x col) : xs)
                 | otherwise = (x: clickBlock xs (row-1, col)) 
 
 -- this is the main game loop
-gameLoop :: [[Char]] -> IO()
-gameLoop board = do
-    -- Print board
+gameLoop :: [[Char]] -> [[Bool]] -> IO()
+gameLoop board mines = do
+    -- print board
     putStrLn ""
     mapM_ putStrLn board
     putStrLn ""
     
-    -- Get input from user
+    -- get input from user
     putStr "Select block: <row> <col>:"
     hFlush stdout
     raw <- getLine
     coord <- return $ parseCoord raw
 
+    -- check if user clicked on a mine
+    if checkMine mines coord then putStrLn "LOSER" else putStrLn "NICE" 
+
     -- alter board 
-    board <- return $ clickBlock board coord
-    gameLoop board
+    -- board <- return $ clickBlock board coord
+    gameLoop board mines
 
 
 main :: IO()
@@ -84,7 +97,7 @@ main = do
     putStrLn $ unlines $ map (concatMap (\b -> if b then "True " else "False ")) mines
 
     -- run the game loop 
-    gameLoop board
+    gameLoop board mines
 
     putStr "Goodbye"   
 

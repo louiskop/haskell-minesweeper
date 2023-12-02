@@ -4,8 +4,8 @@ import System.IO
 type Coord = (Int, Int)
 
 -- create empty board
-createBoard :: Int -> Int -> [[Char]]
-createBoard rows cols = replicate rows $ replicate cols '▯'
+createBoard :: Coord -> [[Char]]
+createBoard (rows, cols) = replicate rows $ replicate cols '▯'
 
 -- Convert list to Coordinate
 listToCoord :: [Int] -> Coord
@@ -50,9 +50,18 @@ main :: IO()
 main = do
 
     putStrLn "Minesweeper in haskell"  
+    putStrLn ""
     
-    -- Create board 
-    board <- return $ createBoard 10 10
+    --  get grid size from user
+    putStr "Specify grid size: <row> <col>:" 
+    hFlush stdout
+    raw <- getLine
+    grid <- return $ parseCoord raw
+    
+
+    -- create board and mine layout
+    board <- return $ createBoard grid
+    -- mines <- return $ createMines grid
 
     -- run the game loop 
     gameLoop board

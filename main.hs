@@ -1,6 +1,6 @@
 
 import System.IO
-
+ 
 type Coord = (Int, Int)
 
 -- create empty board
@@ -43,8 +43,6 @@ gameLoop board = do
 
     -- alter board 
     board <- return $ clickBlock board coord
-    putStrLn ""
-    mapM_ putStrLn board
     gameLoop board
 
 

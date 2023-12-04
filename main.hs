@@ -1,6 +1,7 @@
 
 import System.IO
 import System.Random
+import Data.Char
 import System.Exit (exitFailure)
 
 type Coord = (Int, Int)
@@ -23,6 +24,9 @@ genProbabilities (rows, cols) = do
         splitProbs _ [] = []
         splitProbs n xs = take n xs : splitProbs n (drop n xs) 
 
+-- integer to char conversion
+intToChar :: Int -> Char
+intToChar n = toEnum (n + fromEnum '0')
 
 -- convert list to Coordinate
 listToCoord :: [Int] -> Coord
@@ -36,27 +40,17 @@ parseCoord raw = listToCoord $ map read $ words raw
 coordInRange :: Coord -> Coord -> Bool
 coordInRange (rows, cols) (x, y) = x >= 0 && x < rows && y >= 0 && y < cols
 
+-- check if mine is present at coordinate
 checkMineColumn :: [Bool] -> Int -> Bool
 checkMineColumn (x: xs) i
                 | i == 0 = x
                 | otherwise = checkMineColumn xs (i-1)
 
+-- check if mine is present at coordinate
 checkMine :: [[Bool]] -> Coord -> Bool
 checkMine (x: xs) (row, col)
                 | row == 0 = checkMineColumn x col
                 | otherwise = checkMine xs (row-1, col)
-
--- edit the col in the row that was clicked on
-clickColumn :: [Char] -> Int -> [Char]
-clickColumn (x: xs) i
-                | i == 0 = ('█' : xs)
-                | otherwise = (x: clickColumn xs (i-1))
-
--- edit the block that was clicked on
-clickBlock :: [[Char]] -> Coord -> [[Char]]
-clickBlock (x: xs) (row, col) 
-                | row == 0 = ( (clickColumn x col) : xs)
-                | otherwise = (x: clickBlock xs (row-1, col)) 
 
 -- convert booleans to countable ints
 countBool :: Bool -> Int
@@ -70,6 +64,29 @@ countMines (x, y) (m:ms) = sum $ map (\coord -> countBool $ checkMine (m:ms) coo
                         coordList = [(x-1, y-1), (x-1, y), (x-1, y+1), (x, y-1), (x, y+1), (x+1, y-1), (x+1, y), (x+1, y+1)]
                         cols = length m
                         rows = length (m:ms)
+
+
+-- update board numbers
+updateColumn :: Int -> Coord -> [Char] -> [[Bool]] -> [Char]
+updateColumn i (row, col) (x: xs) mines
+                    | i == 0 = ( value : xs)
+                    | otherwise = (x: (updateColumn (i-1) (row, col) xs mines))
+                    where 
+                        value = if countMines (row, col) mines > 0 then
+                            (intToChar $ countMines (row, col) mines )
+                            else '█'
+
+-- update board numbers
+updateBoard :: Int -> Coord -> [[Char]] -> [[Bool]] -> [[Char]]
+updateBoard i (row, col) (x:xs) mines
+                    | i == 0 = ( (updateColumn col (row, col) x mines) : xs )
+                    | otherwise = (x: (updateBoard (i-1) (row, col) xs mines))
+
+                    -- where
+                        -- coordList = [(x-1, y-1), (x-1, y), (x-1, y+1), (x, y-1), (x, y+1), (x+1, y-1), (x+1, y), (x+1, y+1)]
+                        -- cols = length m
+                        -- rows = length (m:ms)
+
 
 -- this is the main game loop
 gameLoop :: [[Char]] -> [[Bool]] -> IO()
@@ -92,7 +109,7 @@ gameLoop board mines = do
             exitFailure
         else do 
             -- alter board 
-            board <- return $ clickBlock board coord
+            board <- return $ updateBoard (fst coord) coord board mines
             gameLoop board mines
 
 

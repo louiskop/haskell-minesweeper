@@ -32,6 +32,10 @@ listToCoord [x, y] = (x,y)
 parseCoord :: String -> Coord
 parseCoord raw = listToCoord $ map read $ words raw
 
+-- check if coords are on board
+coordInRange :: Coord -> Coord -> Bool
+coordInRange (rows, cols) (x, y) = x >= 0 && x < rows && y >= 0 && y < cols
+
 checkMineColumn :: [Bool] -> Int -> Bool
 checkMineColumn (x: xs) i
                 | i == 0 = x
@@ -54,6 +58,19 @@ clickBlock (x: xs) (row, col)
                 | row == 0 = ( (clickColumn x col) : xs)
                 | otherwise = (x: clickBlock xs (row-1, col)) 
 
+-- convert booleans to countable ints
+countBool :: Bool -> Int
+countBool x | x = 1
+            | otherwise = 0
+
+-- compute number of mines for adj blocks
+countMines :: Coord -> [[Bool]] -> Int
+countMines (x, y) (m:ms) = sum $ map (\coord -> countBool $ checkMine (m:ms) coord) $ filter (coordInRange (rows, cols)) coordList
+                    where
+                        coordList = [(x-1, y-1), (x-1, y), (x-1, y+1), (x, y-1), (x, y+1), (x+1, y-1), (x+1, y), (x+1, y+1)]
+                        cols = length m
+                        rows = length (m:ms)
+
 -- this is the main game loop
 gameLoop :: [[Char]] -> [[Bool]] -> IO()
 gameLoop board mines = do
@@ -61,7 +78,7 @@ gameLoop board mines = do
     putStrLn ""
     mapM_ putStrLn board
     putStrLn ""
-    
+
     -- get input from user
     putStr "Select block: <row> <col>:"
     hFlush stdout

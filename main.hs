@@ -40,6 +40,17 @@ parseCoord raw = listToCoord $ map read $ words raw
 coordInRange :: Coord -> Coord -> Bool
 coordInRange (rows, cols) (x, y) = x >= 0 && x < rows && y >= 0 && y < cols
 
+coordNotExploredColumn :: Int -> [Char] -> Bool
+coordNotExploredColumn col (x:xs)
+                | (col == 0) = (x == '▯')
+                | otherwise = coordNotExploredColumn (col - 1) xs
+
+-- check if coord is explored
+coordNotExplored :: [[Char]] -> Coord -> Bool
+coordNotExplored (x:xs) (row, col)
+                | (row == 0) = coordNotExploredColumn col x
+                | otherwise = coordNotExplored xs (row-1, col) 
+
 -- check if mine is present at coordinate
 checkMineColumn :: [Bool] -> Int -> Bool
 checkMineColumn (x: xs) i
@@ -66,27 +77,31 @@ countMines (x, y) (m:ms) = sum $ map (\coord -> countBool $ checkMine (m:ms) coo
                         rows = length (m:ms)
 
 
--- update board numbers
-updateColumn :: Int -> Coord -> [Char] -> [[Bool]] -> [Char]
-updateColumn i (row, col) (x: xs) mines
+-- update a block number
+updateSingleColumn :: Int -> Coord -> [Char] -> [[Bool]] -> [Char]
+updateSingleColumn i (row, col) (x: xs) mines
                     | i == 0 = ( value : xs)
-                    | otherwise = (x: (updateColumn (i-1) (row, col) xs mines))
+                    | otherwise = (x: (updateSingleColumn (i-1) (row, col) xs mines))
                     where 
                         value = if countMines (row, col) mines > 0 then
                             (intToChar $ countMines (row, col) mines )
                             else '█'
 
--- update board numbers
-updateBoard :: Int -> Coord -> [[Char]] -> [[Bool]] -> [[Char]]
-updateBoard i (row, col) (x:xs) mines
-                    | i == 0 = ( (updateColumn col (row, col) x mines) : xs )
-                    | otherwise = (x: (updateBoard (i-1) (row, col) xs mines))
+-- update a block number
+updateSingle :: Int -> Coord -> [[Char]] -> [[Bool]] -> [[Char]]
+updateSingle i (row, col) (x:xs) mines
+                    | i == 0 = ( (updateSingleColumn col (row, col) x mines) : xs )
+                    | otherwise = (x: (updateSingle (i-1) (row, col) xs mines))
 
-                    -- where
-                        -- coordList = [(x-1, y-1), (x-1, y), (x-1, y+1), (x, y-1), (x, y+1), (x+1, y-1), (x+1, y), (x+1, y+1)]
-                        -- cols = length m
-                        -- rows = length (m:ms)
-
+-- explore board and update numbering
+updateBoard :: Coord -> [[Bool]] -> [[Char]] -> [[Char]]
+updateBoard (row, col) mines (b:bs)
+            | (countMines (row, col) mines) <= 0 = foldr (\(x,y) acc -> (updateBoard (x, y) mines acc)) (updateSingle row (row,col) (b:bs) mines) $ filter (coordNotExplored (b:bs)) $ filter (coordInRange (rows, cols)) coordList
+            | otherwise = updateSingle row (row, col) (b:bs) mines
+            where
+                coordList = [(row-1, col-1), (row-1, col), (row-1, col+1), (row, col-1), (row, col+1), (row+1, col-1), (row+1, col), (row+1, col+1)]
+                cols = length b
+                rows = length (b:bs)
 
 -- this is the main game loop
 gameLoop :: [[Char]] -> [[Bool]] -> IO()
@@ -109,7 +124,7 @@ gameLoop board mines = do
             exitFailure
         else do 
             -- alter board 
-            board <- return $ updateBoard (fst coord) coord board mines
+            board <- return $ updateBoard coord mines board
             gameLoop board mines
 
 
@@ -130,7 +145,7 @@ main = do
     -- create board and mine layout
     board <- return $ createBoard grid
     probabilities <- genProbabilities grid
-    mines <- return $ createMines grid 0.4 probabilities
+    mines <- return $ createMines grid 0.2 probabilities
 
     -- Debugging: print the boolean board for mines
     putStrLn $ unlines $ map (concatMap (\b -> if b then "True " else "False ")) mines

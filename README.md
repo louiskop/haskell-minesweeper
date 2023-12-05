@@ -3,6 +3,9 @@
 
 ## What I learned
 
+- Haskell programming language
+- Functinal Programming
+- All needed functional concepts - Monads, Currying, Folding, Recursion, List comprehension, Partial function application etc ...
 
 ## How to run
 

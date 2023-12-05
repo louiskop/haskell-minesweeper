@@ -127,7 +127,6 @@ gameLoop board mines = do
     else do
         putStr ""
     
-
     -- parse coordinates into tuple
     coord <- return $ parseCoord raw
 
@@ -158,12 +157,9 @@ gameLoop board mines = do
                 else do
                     -- run game loop again
                     gameLoop board mines
-
-
-   
+ 
 main :: IO()
 main = do
-
 
     putStrLn "==================================="
     putStrLn "Minesweeper in haskell"  

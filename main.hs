@@ -103,6 +103,10 @@ updateBoard (row, col) mines (b:bs)
                 cols = length b
                 rows = length (b:bs)
 
+-- check winning board state
+winState :: [[Char]] -> [[Bool]] -> Coord -> Bool
+winState board mines (rows, cols) = and [ (checkMine mines (x,y)) || (not (coordNotExplored board (x,y))) | x <- [0..(rows-1)] , y <- [0..(cols-1)]]
+
 -- this is the main game loop
 gameLoop :: [[Char]] -> [[Bool]] -> IO()
 gameLoop board mines = do
@@ -115,26 +119,58 @@ gameLoop board mines = do
     putStr "Select block: <row> <col>:"
     hFlush stdout
     raw <- getLine
+    
+    if raw == "memo" then do
+        -- print the boolean board for mines
+        putStrLn $ unlines $ map (concatMap (\b -> if b then "True " else "False ")) mines
+        gameLoop board mines
+    else do
+        putStr ""
+    
+
+    -- parse coordinates into tuple
     coord <- return $ parseCoord raw
 
     -- check if user clicked on a mine
     if checkMine mines coord 
         then do 
+            putStrLn "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             putStrLn "Oops, you clicked on a mine, game over !"
+            putStrLn "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             exitFailure
         else do 
             -- alter board 
             board <- return $ updateBoard coord mines board
-            gameLoop board mines
+            
+            -- check winning state 
+            if winState board mines (length board, length (head board)) 
+                then do
+                    -- print board
+                    putStrLn ""
+                    mapM_ putStrLn board
+                    putStrLn ""
+
+                    -- print winning message and exit
+                    putStrLn "++++++++++++++++++++++++++++++++"
+                    putStrLn("CONGRATULATIONS, YOU WIN !!!")
+                    putStrLn "++++++++++++++++++++++++++++++++"
+                    exitFailure
+                else do
+                    -- run game loop again
+                    gameLoop board mines
 
 
    
 main :: IO()
 main = do
 
+
+    putStrLn "==================================="
     putStrLn "Minesweeper in haskell"  
+    putStrLn "==================================="
+    putStrLn "Type 'memo' for bomb locations"
     putStrLn ""
-    
+
     --  get grid size from user
     putStr "Specify grid size: <row> <col>:" 
     hFlush stdout
@@ -145,10 +181,7 @@ main = do
     -- create board and mine layout
     board <- return $ createBoard grid
     probabilities <- genProbabilities grid
-    mines <- return $ createMines grid 0.2 probabilities
-
-    -- Debugging: print the boolean board for mines
-    putStrLn $ unlines $ map (concatMap (\b -> if b then "True " else "False ")) mines
+    mines <- return $ createMines grid 0.1 probabilities
 
     -- run the game loop 
     gameLoop board mines
